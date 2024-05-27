@@ -3,6 +3,7 @@ delete it later
 import com.google.api.core.ApiFuture
 import com.google.cloud.firestore.DocumentSnapshot
 import com.google.cloud.firestore.Firestore
+import com.google.cloud.firestore.WriteResult
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
@@ -29,8 +30,9 @@ class FirestoreHandlerTest {
 
     @Test
     fun `addData should return OK status and success message`() {
-        val mockFuture: ApiFuture<Void> = CompletableFuture.completedFuture(null)
-        val mockDocumentReference = mock(Firestore::class.java)
+        val mockFuture: ApiFuture<WriteResult> = mock(ApiFuture::class.java) as ApiFuture<WriteResult>
+        val mockWriteResult: WriteResult = mock(WriteResult::class.java)
+        Mockito.`when`(mockFuture.get()).thenReturn(mockWriteResult)
         Mockito.`when`(firestore.collection("myCollection").document("1").set(mapOf("name" to "John"))).thenReturn(mockFuture)
 
         val request = Request(Method.POST, "/addData").body("""{"id":"1","content":{"name":"John"}}""")
@@ -44,8 +46,9 @@ class FirestoreHandlerTest {
         val mockDocumentSnapshot = mock(DocumentSnapshot::class.java)
         Mockito.`when`(mockDocumentSnapshot.exists()).thenReturn(true)
         Mockito.`when`(mockDocumentSnapshot.data).thenReturn(mapOf("name" to "John"))
-        val mockFuture: ApiFuture<DocumentSnapshot> = CompletableFuture.completedFuture(mockDocumentSnapshot)
+        val mockFuture: ApiFuture<DocumentSnapshot> = mock(ApiFuture::class.java) as ApiFuture<DocumentSnapshot>
         Mockito.`when`(firestore.collection("myCollection").document("1").get()).thenReturn(mockFuture)
+        Mockito.`when`(mockFuture.get()).thenReturn(mockDocumentSnapshot)
 
         val getRequest = Request(Method.GET, "/getData/1")
         val response: Response = firestoreHandler.getData(getRequest)
@@ -57,8 +60,9 @@ class FirestoreHandlerTest {
     fun `getData should return NOT FOUND status if document does not exist`() {
         val mockDocumentSnapshot = mock(DocumentSnapshot::class.java)
         Mockito.`when`(mockDocumentSnapshot.exists()).thenReturn(false)
-        val mockFuture: ApiFuture<DocumentSnapshot> = CompletableFuture.completedFuture(mockDocumentSnapshot)
+        val mockFuture: ApiFuture<DocumentSnapshot> = mock(ApiFuture::class.java) as ApiFuture<DocumentSnapshot>
         Mockito.`when`(firestore.collection("myCollection").document("1").get()).thenReturn(mockFuture)
+        Mockito.`when`(mockFuture.get()).thenReturn(mockDocumentSnapshot)
 
         val getRequest = Request(Method.GET, "/getData/1")
         val response: Response = firestoreHandler.getData(getRequest)
@@ -69,7 +73,8 @@ class FirestoreHandlerTest {
     @Test
     fun `addData should return INTERNAL SERVER ERROR status if an exception occurs`() {
         val exception = RuntimeException("Firestore exception")
-        val mockFuture: ApiFuture<Void> = CompletableFuture.failedFuture(exception)
+        val mockFuture: ApiFuture<WriteResult> = mock(ApiFuture::class.java) as ApiFuture<WriteResult>
+        Mockito.`when`(mockFuture.get()).thenThrow(exception)
         Mockito.`when`(firestore.collection("myCollection").document("1").set(mapOf("name" to "John"))).thenReturn(mockFuture)
 
         val request = Request(Method.POST, "/addData").body("""{"id":"1","content":{"name":"John"}}""")
@@ -81,7 +86,8 @@ class FirestoreHandlerTest {
     @Test
     fun `getData should return INTERNAL SERVER ERROR status if an exception occurs`() {
         val exception = RuntimeException("Firestore exception")
-        val mockFuture: ApiFuture<DocumentSnapshot> = CompletableFuture.failedFuture(exception)
+        val mockFuture: ApiFuture<DocumentSnapshot> = mock(ApiFuture::class.java) as ApiFuture<DocumentSnapshot>
+        Mockito.`when`(mockFuture.get()).thenThrow(exception)
         Mockito.`when`(firestore.collection("myCollection").document("1").get()).thenReturn(mockFuture)
 
         val getRequest = Request(Method.GET, "/getData/1")
