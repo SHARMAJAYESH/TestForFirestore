@@ -111,3 +111,63 @@ fun main() {
         println("Response body: ${response.bodyString()}")
     }
 }
+
+
+// another way
+
+import com.google.auth.oauth2.GoogleCredentials
+import org.http4k.client.OkHttp
+import org.http4k.core.*
+import org.http4k.core.Method.POST
+import org.http4k.core.body.toBody
+import org.http4k.format.Gson.auto
+import org.http4k.lens.Header
+import org.http4k.lens.RequestContextLens
+import org.http4k.lens.RequestLens
+
+data class FirestoreDatabaseRequest(val type: String, val locationId: String)
+
+fun main() {
+    val projectId = "your-project-id"
+    val databaseId = "jayesh"
+    val locationId = "us-central" // Specify the location ID
+
+    // Obtain the default credentials
+    val credentials = GoogleCredentials.getApplicationDefault()
+        .createScoped(listOf("https://www.googleapis.com/auth/datastore"))
+
+    // Refresh the credentials to get a valid access token
+    credentials.refreshIfExpired()
+    val accessToken = credentials.accessToken.tokenValue
+
+    // Define the URL for the REST API call
+    val url = "https://firestore.googleapis.com/v1/projects/$projectId/databases?databaseId=$databaseId"
+
+    // Define the JSON payload with locationId
+    val firestoreDatabaseRequest = FirestoreDatabaseRequest("FIRESTORE_NATIVE", locationId)
+
+    // Prepare the HTTP client
+    val client = OkHttp()
+
+    // Lens for request body
+    val bodyLens: RequestLens<FirestoreDatabaseRequest> = Body.auto<FirestoreDatabaseRequest>().toLens()
+
+    // Lens for Authorization header
+    val authHeaderLens: RequestContextLens<String> = Header.required("Authorization")
+
+    // Create the request
+    val request = Request(POST, url)
+        .with(authHeaderLens of "Bearer $accessToken")
+        .with(bodyLens of firestoreDatabaseRequest)
+
+    // Make the HTTP call
+    val response: Response = client(request)
+
+    // Check the response
+    if (response.status.successful) {
+        println("Database created successfully: ${response.bodyString()}")
+    } else {
+        println("Error creating database: ${response.status.code} - ${response.status.description}")
+        println("Response body: ${response.bodyString()}")
+    }
+}
